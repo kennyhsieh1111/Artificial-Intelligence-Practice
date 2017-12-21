@@ -1,91 +1,100 @@
-# Only support finding maximum of linear equation now
-# Support finding minimum in the near futuress
-
+# Using Hill Climbing Algorithm(HC) to find the maximum value of the specific function in the constraint area. 
 import random
 import numpy as np
-from math import sin, cos, pi, exp
 import matplotlib.pyplot as plt
 
-class OptimizeFunction:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-        self.f = lambda x, y: 21.5 + x*sin(4*pi*x) + y*sin(20*pi*y)
+def random_move(x, y):
+    ''' 
+    Random move around the current point
+    '''
+    x = (random.uniform(0.0001, 0.9999) - 0.5) * 0.1 + x
+    y = (random.uniform(0.0001, 0.9999) - 0.5) * 0.1 + y
+    return x, y
 
-    # Constraints
-    def calculate(self):
-        x, y = {random.uniform(-3,  12.1), random.uniform(4.1, 5.8)}
-        result = {"x" : x, "y" : y, "result" : self.f(x, y)}
-        return result
+def check_constraints(x, y):
+    '''
+    Check whether the points are located in the constraints or not
+    '''
+    return True if -3 <= x <= 12.1 and 4.1 <= y <= 5.8 else False
+ 
+def optimizing_function(x, y, temp, length, outctr):
+    '''
+    Setting the optimizing function
+    '''
+    result = 21.5 + x*np.sin(4*np.pi*x) + y*np.sin(20*np.pi*y)
+    return {"outctr" : outctr, "x": x, "y" : y, "temp" : temp, "length" : length, "result" : result}
 
-class Probability:
-    def calculate(self, current_result, next_result, Temp):
-        delta = next_result - current_result
-        if(delta >= 0) :
-            return 1
-        else:
-            return np.exp(delta / Temp)
+def boltzman_probability(next_result, current_result, temp):
+    dE = next_result - current_result
+    if dE >= 0:
+        prob = 1
+    else:
+        prob = np.exp(-dE / temp)
+    return prob
 
-class SimulateAnnealing:
-    def __init__(self, Temp, min_Temp, cooling_rate, length, Function, Probability):
-        self.Temp = Temp
-        self.min_Temp = min_Temp
-        self.cooling_rate = cooling_rate
-        self.length = length
-        self.Function = Function
-        self.Probability = Probability
-        
-    def getSolution(self):
-        iteration = []
-        Temp = self.Temp
-        min_Temp = self.min_Temp
-        cooling_rate = self.cooling_rate
-        length = self.length
+def SimulatedAnnealing(x, y, temp, minTemp, coolingRate, length):
+    '''
+    Implement SimulatedAnnealing
 
-        current_result = best_so_far = self.Function.calculate()
-        best_so_far["Temp"] = Temp
-        iteration.append(current_result["result"])
+    Returns:
+        iteration: record every trials that have been explored
+        best_iteration: record the trails that have improved the value
+    '''
 
-        while Temp > min_Temp:
-            i = 0
-            while i <= length:
-                next_result = self.Function.calculate()
-                iteration.append(next_result["result"])
+    ctr = 1
+    out_ctr = 1
 
-                # Update the result
-                if(next_result["result"] > current_result["result"]):
-                    best_so_far = next_result
-                    best_so_far["Temp"] = Temp
-                    print("Best_so_far", best_so_far, "Temp", Temp)
+    iteration = []
+    best_iteration = []
 
-                # Calculate the probabiltity of accept next state
-                prob = self.Probability.calculate(current_result["result"], next_result["result"], Temp)
-                if prob > random.random():
-                    current_result = next_result
-                i += 1
+    current_state = optimizing_function(x, y, temp, 1, out_ctr)
+    iteration.append(current_state)
+    best_iteration.append(current_state)
+    best_result = best_iteration[-1]["result"]
 
-            Temp = Temp * cooling_rate
-        return best_so_far, iteration
+    while minTemp < temp:
+        while ctr <= length:
+            while not check_constraints(x, y):
+                new_x, new_y = random_move(x, y)
+                if check_constraints(new_x, new_y): 
+                    x, y = new_x, new_y
+                    break
+            
+            next_state = optimizing_function(x, y, temp, ctr, out_ctr)
+            iteration.append(next_state)
 
+            prob = boltzman_probability(next_state["result"], current_state["result"], temp)
+            prob_accept = random.choice([1] * int(prob*100) + [0] * int(100 - (prob*100)))
+            if prob == 1 or prob_accept == 1:
+                if next_state["result"] > best_result:
+                    best_iteration.append(next_state) 
+                    best_result = best_iteration[-1]["result"]
+                    print("Best_so_far", next_state)
+                current_state = next_state
+                
+            x, y = random_move(x, y)
+            ctr += 1
+            out_ctr += 1
+        ctr = 1
+        temp = temp * coolingRate
 
+    return best_iteration, iteration
+
+# Main Function
+## Random start at the point in the constraint area
 initial_x, initial_y = {random.uniform(-3,  12.1), random.uniform(4.1, 5.8)}
-Temp = 100
-Min_Temp = 1
-Length = 100
-Cooling_Rate = 0.99
+temp = 100
+minTemp = 1
+coolingRate = 0.99
+length = 100
+best_solution, iteration = SimulatedAnnealing(initial_x, initial_y, temp, minTemp, coolingRate, length)
 
-optimizeFunction = OptimizeFunction(initial_x, initial_y)
-sa = SimulateAnnealing(Temp, Min_Temp, Cooling_Rate, Length, optimizeFunction, Probability())
-solution, result = sa.getSolution()
-print("Best Solution")
-print(solution)
-print("length of iteration",len(result))
+#print(iteration)
+print("Best Solution : ", best_solution[-1]["result"])
 
-# Plot the iteration
-plt.scatter(len(result), solution["result"], facecolor='r')
-plt.annotate(s = 'x : [{:.6f}, {:.6f}]\ny : {:.6f}'.format(solution["x"], solution["y"], solution["result"]), xy = (len(result), solution["result"]))
-plt.plot(range(len(result)),result)
-plt.title("Simulated Annealing\n" + "Temp : " + str(Temp) + ", Min_Temp : " + str(Min_Temp) + ", Cooling Rate : " + str(Cooling_Rate))
-plt.xlabel("Iteration")
-plt.ylabel("Fitness")
+plt.plot(range(len(iteration)), [item['result'] for item in iteration], label = "Trials")
+plt.plot([item['outctr'] for item in best_solution], [item['result'] for item in best_solution], '.r-', label = "Best_so_far")
+plt.annotate(s = 'x : [{:.6f}, {:.6f}]\ny : {:.6f}'.format(best_solution[-1]["x"], best_solution[-1]["y"], best_solution[-1]["result"]), xy = (best_solution[-1]["outctr"], best_solution[-1]["result"]), xytext=(best_solution[-1]["outctr"], best_solution[-1]["result"]-3))
+plt.title("Simulated Annealing")
+plt.legend(loc='lower right')
 plt.show()

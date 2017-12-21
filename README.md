@@ -1,3 +1,3 @@
 # Artificial Intelligence Practice
 - Homework 3
-    - Implement Genetic Algorithm(GA), Hill Climbing(HC), Simulated Annealing(SA) algorithms in Linear Equation Optimization
+    - Implement Genetic Algorithm(GA), Hill Climbing(HC), Simulated Annealing(SA) algorithms to find maximum value of two-dimensioal linear equation.
