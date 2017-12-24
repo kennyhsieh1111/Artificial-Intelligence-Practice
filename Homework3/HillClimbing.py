@@ -28,6 +28,9 @@ def HillClimbing(x, y, threshold):
     '''
     Implement Hill Climbing
 
+    Args:
+        threshold : the numbers of iterations
+
     Returns:
         iteration: record every trials that have been explored
         best_iteration: record the trails that have improved the value
